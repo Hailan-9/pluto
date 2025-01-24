@@ -28,13 +28,14 @@ from nuplan.planning.training.preprocessing.features.abstract_model_feature impo
     AbstractModelFeature,
 )
 from shapely import LineString, Point
-
+# NOTE 导入features.pluto_feature模块中的PlutoFeature类！！！！！！
 from src.features.pluto_feature import PlutoFeature
 from src.scenario_manager.cost_map_manager import CostMapManager
 from src.scenario_manager.scenario_manager import OccupancyType, ScenarioManager
 from . import common
 
 
+# NOTE 数据预处理，从原始的nuplan的dp数据得到我们需要的训练数据！！！！！！
 class PlutoFeatureBuilder(AbstractFeatureBuilder):
     def __init__(
         self,
@@ -95,7 +96,7 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
     def get_feature_unique_name(cls) -> str:
         """Inherited, see superclass."""
         return "feature"
-
+    # NOTE 训练模型的时候，从db文件中（即db中的每个场景（scenario））读取数据，构建feature！！！！！！
     def get_features_from_scenario(
         self,
         scenario: AbstractScenario,
@@ -114,6 +115,7 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
             time_horizon=self.future_horizon,
             num_samples=self.future_samples,
         )
+        # NOTE 自车 过去 未来的轨迹（即状态）列表！！！！！！
         ego_state_list = (
             list(past_ego_trajectory) + [ego_cur_state] + list(future_ego_trajectory)
         )
@@ -136,10 +138,11 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
                 num_samples=self.future_samples,
             )
         ]
+        # NOTE 他车 过去 未来的轨迹（即状态）列表！！！！！！
         tracked_objects_list = (
             past_tracked_objects + [present_tracked_objects] + future_tracked_objects
         )
-
+        # NOTE 构建feature！！！！！！
         data = self._build_feature(
             present_idx=self.history_samples,
             ego_state_list=ego_state_list,
@@ -154,7 +157,7 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
         )
 
         return data
-
+    # NOTE test模型的时候，使用get_features_from_simulation！！！！！！
     def get_features_from_simulation(
         self, current_input: PlannerInput, initialization: PlannerInitialization
     ) -> AbstractModelFeature:
@@ -192,10 +195,12 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
             present_idx = len(ego_state_list) + present_idx
 
         present_ego_state = ego_state_list[present_idx]
+        # 自车几何中心位置，非后轴中心位置
         query_xy = present_ego_state.center
         traffic_light_status = list(traffic_light_status)  # note: tl is a iterator
 
         if self.scenario_manager is None:
+            # NOTE 场景管理器！！！！！！
             scenario_manager = ScenarioManager(
                 map_api,
                 present_ego_state,
@@ -214,12 +219,13 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
         )
 
         data = {}
-
+        # NOTE
         data["current_state"] = self._get_ego_current_state(
             ego_state_list[present_idx], ego_state_list[present_idx - 1]
         )
-
+        # NOTE 自车过去 现在 未来的状态 dict类型 shape is (T, dim)
         ego_features = self._get_ego_features(ego_states=ego_state_list)
+        # NOTE 他车过去 现在 未来的状态 dict类型
         agent_features, agent_tokens, agents_polygon = self._get_agent_features(
             query_xy=query_xy,
             present_idx=present_idx,
@@ -228,6 +234,8 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
 
         data["agent"] = {}
         for k in agent_features.keys():
+            # key为position 、velocity......
+            # NOTE (1+N, T, dim)
             data["agent"][k] = np.concatenate(
                 [ego_features[k][None, ...], agent_features[k]], axis=0
             )
@@ -235,7 +243,7 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
 
         if inference:
             data["agent_tokens"] = agent_tokens
-
+        # 静态和动态障碍物都是在tracked_objects_list中的
         data["static_objects"] = self._get_static_objects_features(
             present_ego_state, scenario_manager, tracked_objects_list[present_idx]
         )
@@ -247,8 +255,9 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
             traffic_light_status=traffic_light_status,
             radius=self.radius,
         )
-
+        # 推理，即模型训练完成后，进行预测
         if not inference:
+            # NOTE
             data["causal"] = self.scenario_casual_reasoning_preprocess(
                 present_ego_state,
                 scenario_manager,
@@ -259,6 +268,7 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
             data["causal"]["interaction_label"] = self._get_interaction_label(
                 ego_features, agent_features
             )
+            # NOTE 自车的有效性掩码
             data["agent"]["valid_mask"][0, self.history_samples + 1 :] = data["causal"][
                 "fixed_ego_future_valid_mask"
             ]
@@ -283,9 +293,9 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
             data["reference_line"] = self._get_reference_line_feature(
                 scenario_manager, ego_features
             )
-
+        # NOTE 数据归一化，具体来讲就是坐标等数据归一化！！！
         return PlutoFeature.normalize(data, first_time=True, radius=self.radius)
-
+    # 场景因果推理预处理
     def scenario_casual_reasoning_preprocess(
         self,
         ego_state: EgoState,
@@ -350,6 +360,7 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
         )
 
         return {
+            # 在没有前车的情况下等待红灯
             "is_waiting_for_red_light_without_lead": is_waiting_for_red_light_without_lead,
             "leading_agent_mask": leading_agent_mask,
             "leading_distance": leading_distance,
@@ -409,7 +420,7 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
         category = np.array(
             self.interested_objects_types.index(TrackedObjectType.EGO), dtype=np.int8
         )
-
+        # NOTE 自车
         return {
             "position": position,
             "heading": heading,
@@ -456,7 +467,9 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
 
         agent_ids = np.array([agent.track_token for agent in present_agents])
         agent_cur_pos = np.array([agent.center.array for agent in present_agents])
+        # NOTE 根据距离进行排序
         distance = np.linalg.norm(agent_cur_pos - query_xy.array[None, :], axis=1)
+        # 按照距离自车当前位置的近远顺序排序的他车的id
         agent_ids_sorted = agent_ids[np.argsort(distance)[: self.max_agents]]
         agent_ids_dict = {agent_id: i for i, agent_id in enumerate(agent_ids_sorted)}
 
@@ -466,7 +479,7 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
             ):
                 if agent.track_token not in agent_ids_dict:
                     continue
-
+                # 0 1 2 3 4 5 ....
                 idx = agent_ids_dict[agent.track_token]
                 position[idx, t] = agent.center.array
                 heading[idx, t] = agent.center.heading
@@ -488,6 +501,7 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
             "category": category,
             "valid_mask": valid_mask,
         }
+        
 
         return agent_features, list(agent_ids_sorted), polygon
 
@@ -524,7 +538,7 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
         else:
             static_objects = np.zeros((0, 6), dtype=np.float64)
             valid_mask = np.zeros(0, dtype=np.bool)
-
+        # NOTE (objects, dim)
         return {
             "position": static_objects[:, :2],
             "heading": static_objects[:, 2],
@@ -542,9 +556,10 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
         radius: float,
         sample_points: int = 20,
     ):
+        # NOTE route_roadblock_ids：导航路径所对应的道路id！！！
         route_ids = set(int(route_id) for route_id in route_roadblock_ids)
         tls = {tl.lane_connector_id: tl.status for tl in traffic_light_status}
-
+        # 三种类型的地图元素，分别是语义地图层的车道 车道连接 人行横道
         map_objects = map_api.get_proximal_map_objects(
             query_xy,
             radius,
@@ -568,16 +583,19 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
             + [SemanticMapLayer.CROSSWALK]
             * len(map_objects[SemanticMapLayer.CROSSWALK])
         )
-
+        # M：车道元素的个数
         M, P = len(lane_objects) + len(crosswalk_objects), sample_points
+        # NOTE 3是指车道中心线+左右边界
         point_position = np.zeros((M, 3, P, 2), dtype=np.float64)
         point_vector = np.zeros((M, 3, P, 2), dtype=np.float64)
         point_side = np.zeros((M, 3), dtype=np.int8)
         point_orientation = np.zeros((M, 3, P), dtype=np.float64)
+        # NOTE 车道中心线的中间点位姿
         polygon_center = np.zeros((M, 3), dtype=np.float64)
         polygon_position = np.zeros((M, 2), dtype=np.float64)
         polygon_orientation = np.zeros(M, dtype=np.float64)
         polygon_type = np.zeros(M, dtype=np.int8)
+        # NOTE 多边形是否在导航route上
         polygon_on_route = np.zeros(M, dtype=np.bool)
         polygon_tl_status = np.zeros(M, dtype=np.int8)
         polygon_speed_limit = np.zeros(M, dtype=np.float64)
@@ -588,7 +606,7 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
             object_id = int(lane.id)
             idx = object_ids.index(object_id)
             speed_limit = lane.speed_limit_mps
-
+            # shape is (P, 2)
             centerline = self._sample_discrete_path(
                 lane.baseline_path.discrete_path, sample_points + 1
             )
@@ -598,8 +616,9 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
             right_bound = self._sample_discrete_path(
                 lane.right_boundary.discrete_path, sample_points + 1
             )
+            # 3是指车道中心线 左右边界
             edges = np.stack([centerline, left_bound, right_bound], axis=0)
-
+            # NOTE vector是向量的意思，这里指的是下一点的坐标减去上一个点的坐标，即上一点指向下一个点的向量
             point_vector[idx] = edges[:, 1:] - edges[:, :-1]
             point_position[idx] = edges[:, :-1]
             point_orientation[idx] = np.arctan2(
@@ -609,6 +628,7 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
 
             polygon_center[idx] = np.concatenate(
                 [
+                    # NOTE 提取中心线上的中间点位置和偏航角
                     centerline[int(sample_points / 2)],
                     [point_orientation[idx, 0, int(sample_points / 2)]],
                 ],
@@ -649,7 +669,7 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
             polygon_on_route[idx] = False
             polygon_tl_status[idx] = TrafficLightStatusType.UNKNOWN
             polygon_has_speed_limit[idx] = False
-
+        # NOTE 地图数据
         map_features = {
             "point_position": point_position,
             "point_vector": point_vector,
@@ -667,7 +687,7 @@ class PlutoFeatureBuilder(AbstractFeatureBuilder):
         }
 
         return map_features, object_ids
-
+    # 得到参考线特征
     def _get_reference_line_feature(
         self, scenario_manager: ScenarioManager, ego_features
     ):

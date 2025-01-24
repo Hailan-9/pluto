@@ -1,3 +1,4 @@
+# NOTE pluto_planner的配置文件，递归进行配置需要实例类的配置文件
 pluto_planner:
   _target_: src.planners.pluto_planner.PlutoPlanner
   _convert_: "all"

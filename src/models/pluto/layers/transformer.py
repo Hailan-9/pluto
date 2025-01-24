@@ -93,7 +93,7 @@ class TransformerEncoderLayer(nn.Module):
 
         return src
 
-
+# NOTE 解码器的交叉注意力模块
 class CrossAttentionLayer(nn.Module):
     def __init__(
         self,

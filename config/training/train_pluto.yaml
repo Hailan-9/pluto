@@ -4,10 +4,12 @@ py_func: train
 objective_aggregate_mode: mean
 
 defaults:
+# /data_augmentation 是一个配置组，可能对应一个文件夹 conf/data_augmentation。
+# override 是 Hydra 的一个关键字，表示覆盖某个配置组的默认值。
         - override /data_augmentation:
                   - contrastive_scenario_generator
         - override /splitter: nuplan
-        - override /model: pluto_model
+        - override /model: pluto_model # NOTE 模型的名字！！！！！！
         - override /scenario_filter: training_scenarios_tiny
         - override /custom_trainer: pluto_trainer
         - override /lightning: custom_lightning

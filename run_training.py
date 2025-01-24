@@ -1,3 +1,5 @@
+# NOTE refer from nuplan-devkit/nuplan/planning/script/run_training.py
+# NOTE 数据预处理和训练模型、验证模型都需要使用此脚本
 import logging
 from typing import Optional
 
@@ -16,7 +18,8 @@ from omegaconf import DictConfig
 
 from src.custom_training import (
     TrainingEngine,
-    build_training_engine,
+    build_training_engine, # NOTE 构建训练引擎
+    build_lightning_datamodule,
     update_config_for_training,
 )
 
@@ -50,7 +53,7 @@ def main(cfg: DictConfig) -> Optional[TrainingEngine]:
 
     # Build worker
     worker = build_worker(cfg)
-
+    # NOTE 条件判断，进入各自对应的功能逻辑
     if cfg.py_func == "train":
         # Build training engine
         with ProfilerContextManager(
@@ -63,7 +66,7 @@ def main(cfg: DictConfig) -> Optional[TrainingEngine]:
         with ProfilerContextManager(cfg.output_dir, cfg.enable_profiling, "training"):
             engine.trainer.fit(
                 model=engine.model,
-                datamodule=engine.datamodule,
+                datamodule=engine.datamodule, # NOTE 数据模块
                 ckpt_path=cfg.checkpoint,
             )
         return engine

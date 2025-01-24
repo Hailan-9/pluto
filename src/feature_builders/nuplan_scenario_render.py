@@ -37,7 +37,7 @@ TRAFFIC_LIGHT_COLOR_MAPPING = {
     TrafficLightStatusType.RED: "#d62728",
 }
 
-
+# NOTE 用于渲染 NuPlan 场景，即可视化！！！！！！
 class NuplanScenarioRender:
     def __init__(
         self,
@@ -177,7 +177,7 @@ class NuplanScenarioRender:
             predictions=predictions,
             return_img=return_image,
         )
-
+    # NOTE 场景可视化（渲染）
     def render(
         self,
         map_api: AbstractMap,

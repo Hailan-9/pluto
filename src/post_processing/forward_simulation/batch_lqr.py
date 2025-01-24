@@ -1,3 +1,4 @@
+# NOTE 借鉴和采用了下面两个项目的代码！！！！！！
 #   Heavily borrowed from:
 #   https://github.com/autonomousvision/tuplan_garage (Apache License 2.0)
 # & https://github.com/motional/nuplan-devkit (Apache License 2.0)

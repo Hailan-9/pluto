@@ -124,6 +124,7 @@ def build_lightning_datamodule(
     scenarios = build_scenarios(cfg, worker, model)
 
     # Create datamodule
+    # NOTE 点击链接查看和 Kimi 智能助手的对话 https://kimi.moonshot.cn/share/cu3oabjacc4a085mv18g
     datamodule: pl.LightningDataModule = CustomDataModule(
         feature_preprocessor=feature_preprocessor,
         splitter=splitter,
@@ -148,6 +149,8 @@ def build_lightning_module(
     :return: built object.
     """
     # Create the complete Module
+    # NOTE 检查 cfg 中是否存在键 custom_trainer。
+    # NOTE 实例化的是这个类：LightningTrainer
     if "custom_trainer" in cfg:
         model = instantiate(
             cfg.custom_trainer,
@@ -213,6 +216,8 @@ def build_custom_trainer(cfg: DictConfig) -> pl.Trainer:
             _, _, artifact = cfg.wandb.artifact.split("/")
             checkpoint = os.path.join(os.getcwd(), f"artifacts/{artifact}/model.ckpt")
             run_id = artifact.split(":")[0][-8:]
+            # NOTE Hydra 的 cfg 对象是基于 OmegaConf 的 DictConfig，它的一个重要特性是 动态性，允许在运行时向配置对象中添加新的字段或参数。
+            # 因此，如果在代码中写了 cfg.checkpoint = checkpoint，即使原始 YAML 文件中没有 checkpoint 字段，cfg 对象也会动态地增加这个字段。
             cfg.checkpoint = checkpoint
             cfg.wandb.run_id = run_id
 

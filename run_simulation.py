@@ -1,3 +1,4 @@
+# NOTE refer from nuplan-devkit中的run_simulation.py
 import logging
 import os
 import pprint
@@ -116,7 +117,7 @@ def clean_up_s3_artifacts() -> None:
         local_s3_path = working_path[: working_path.find(s3_dirname) + len(s3_dirname)]
         rmtree(local_s3_path)
 
-
+# NOTE 启动仿真
 @hydra.main(config_path="./config", config_name="default_simulation")
 def main(cfg: DictConfig) -> None:
     """

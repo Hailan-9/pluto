@@ -1,3 +1,4 @@
+# NOTE pluto_model的配置文件，递归进行配置需要实例类的配置文件
 _target_: src.models.pluto.pluto_model.PlanningModel
 _convert_: "all"
 

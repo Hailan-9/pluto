@@ -35,7 +35,7 @@ from ..post_processing.trajectory_evaluator import TrajectoryEvaluator
 from ..scenario_manager.scenario_manager import ScenarioManager
 from .ml_planner_utils import global_trajectory_to_states, load_checkpoint
 
-
+# TODO 必须继承AbstractPlanner！！！！继承自 AbstractPlanner，是 NuPlan 仿真框架中的一个抽象类，用于实现自定义规划器。!!!!!!
 class PlutoPlanner(AbstractPlanner):
     requires_scenario: bool = True
 
@@ -171,7 +171,7 @@ class PlutoPlanner(AbstractPlanner):
 
     def _run_planning_once(self, current_input: PlannerInput):
         ego_state = current_input.history.ego_states[-1]
-
+        # NOTE 规划器模型的输入，也就是输入的数据（feature）！！！！！！
         planner_feature = self._planner_feature_builder.get_features_from_simulation(
             current_input, self._initialization
         )
@@ -203,7 +203,7 @@ class PlutoPlanner(AbstractPlanner):
             current_input.history.ego_states[-1],
             ref_free_trajectory,
         )
-
+        # NOTE 基于规则的得分，post-process的逻辑！！！！！！
         rule_based_scores = self._trajectory_evaluator.evaluate(
             candidate_trajectories=candidate_trajectories,
             init_ego_state=current_input.history.ego_states[-1],
@@ -218,7 +218,7 @@ class PlutoPlanner(AbstractPlanner):
                 self._scenario_manager.get_cached_reference_lines(), ego_state
             ),
         )
-
+        # NOTE 最终的得分，基于规则得分加学习得分！！！！！！
         final_scores = (
             rule_based_scores + self._learning_based_score_weight * learning_based_score
         )

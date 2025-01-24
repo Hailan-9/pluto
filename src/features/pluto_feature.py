@@ -11,15 +11,22 @@ from nuplan.planning.training.preprocessing.features.abstract_model_feature impo
 from torch.nn.utils.rnn import pad_sequence
 
 from src.utils.utils import to_device, to_numpy, to_tensor
-
-
+'''
+在 Python 中，使用 @dataclass 装饰器定义的类会自动生成 __init__ 方法，以及其他一些特殊方法（如 __repr__、__eq__ 等）。
+@dataclass 装饰器是 dataclasses 模块的一部分，它简化了数据类的定义，使得类的定义更加简洁和易于理解。
+'''
 @dataclass
 class PlutoFeature(AbstractModelFeature):
+    # 其中 data 参数被设置为传入的 data 字典，其他参数（data_p、data_n、data_n_info）默认为 None。
     data: Dict[str, Any]  # anchor sample
+    # NOTE 产生训练的正负样本，为对比模仿学习CIL做基础!!!
     data_p: Dict[str, Any] = None  # positive sample
     data_n: Dict[str, Any] = None  # negative sample
     data_n_info: Dict[str, Any] = None  # negative sample info
-
+    '''
+        @classmethod：这是一个装饰器，用于将一个方法定义为类方法。类方法的第一个参数是类本身（通常命名为 cls），
+        而不是实例（self）。这使得类方法可以访问类的属性和方法，而不是实例的属性和方法。
+    '''
     @classmethod
     def collate(cls, feature_list: List[PlutoFeature]) -> PlutoFeature:
         batch_data = {}
@@ -163,7 +170,8 @@ class PlutoFeature(AbstractModelFeature):
             return self.data["reference_line"]["valid_mask"].any()
         else:
             return self.data["map"]["point_position"].shape[0] > 0
-
+    # 这是一个装饰器，用于将一个方法定义为类方法
+    # NOTE 将坐标位置都转化为自车坐标系下,也就是Ego-frame下!!!
     @classmethod
     def normalize(
         self, data, first_time=False, radius=None, hist_steps=21
@@ -180,6 +188,7 @@ class PlutoFeature(AbstractModelFeature):
         )
 
         data["current_state"][:3] = 0
+        # 平移+旋转,然后矩阵相乘,就是坐标系转换!!!
         data["agent"]["position"] = np.matmul(
             data["agent"]["position"] - center_xy, rotate_mat
         )
@@ -241,6 +250,7 @@ class PlutoFeature(AbstractModelFeature):
             point_position = data["map"]["point_position"]
             x_max, x_min = radius, -radius
             y_max, y_min = radius, -radius
+            # NOTE 计算是否是地图中的有效信息
             valid_mask = (
                 (point_position[:, 0, :, 0] < x_max)
                 & (point_position[:, 0, :, 0] > x_min)
@@ -260,5 +270,5 @@ class PlutoFeature(AbstractModelFeature):
 
             data["origin"] = center_xy
             data["angle"] = center_angle
-
+        # NOTE 其中 data 参数被设置为传入的 data 字典，其他参数（data_p、data_n、data_n_info）默认为 None。
         return PlutoFeature(data=data)

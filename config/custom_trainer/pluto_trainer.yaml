@@ -1,1 +1,1 @@
-_target_: src.models.pluto.pluto_trainer.LightningTrainer
+_target_: src.models.pluto.pluto_trainer.LightningTrainer # 用于指定要实例化的类或函数的路径。
